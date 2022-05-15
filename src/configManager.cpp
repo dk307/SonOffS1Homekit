@@ -14,7 +14,7 @@ static const char WebUserNameId[] PROGMEM = "webusername";
 static const char WebPasswordId[] PROGMEM = "webpassword";
 static const char HomeKitPairDataId[] PROGMEM = "homekitpairdata";
 static const char SensorsRefreshIntervalId[] PROGMEM = "sensorsrefreshinterval";
-static const char ShowDisplayInFId[] PROGMEM = "showdisplayinf";
+static const char RelayOnId[] PROGMEM = "relayon";
 
 config config::instance;
 
@@ -81,7 +81,7 @@ bool config::begin()
     data.webUserName = jsonDocument[FPSTR(WebUserNameId)].as<String>();
     data.webPassword = jsonDocument[FPSTR(WebPasswordId)].as<String>();
     data.sensorsRefreshInterval = jsonDocument[FPSTR(SensorsRefreshIntervalId)].as<uint64_t>();
-    data.showDisplayInF = jsonDocument[FPSTR(ShowDisplayInFId)].as<bool>();
+    data.relayOn = jsonDocument[FPSTR(RelayOnId)].as<bool>();
 
     const auto encodedHomeKitData = jsonDocument[FPSTR(HomeKitPairDataId)].as<String>();
 
@@ -121,7 +121,7 @@ void config::save()
 
     jsonDocument[FPSTR(HomeKitPairDataId)] = encodedData.get();
     jsonDocument[FPSTR(SensorsRefreshIntervalId)] = data.sensorsRefreshInterval;
-    jsonDocument[FPSTR(ShowDisplayInFId)] = data.showDisplayInF;
+    jsonDocument[FPSTR(RelayOnId)] = data.relayOn;
 
     String json;
     serializeJson(jsonDocument, json);

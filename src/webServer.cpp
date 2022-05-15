@@ -68,8 +68,8 @@ void WebServer::begin()
 	serverRouting();
 	LOG_INFO(F("WebServer Started"));
 
-	hardware::instance.temperatureChangeCallback.addConfigSaveCallback(std::bind(&WebServer::notifyTemperatureChange, this));
-	hardware::instance.humidityChangeCallback.addConfigSaveCallback(std::bind(&WebServer::notifyHumidityChange, this));
+	//hardware::instance.temperatureChangeCallback.addConfigSaveCallback(std::bind(&WebServer::notifyTemperatureChange, this));
+	//hardware::instance.humidityChangeCallback.addConfigSaveCallback(std::bind(&WebServer::notifyHumidityChange, this));
 }
 
 bool WebServer::manageSecurity(AsyncWebServerRequest *request)
@@ -296,8 +296,8 @@ void WebServer::sensorGet(AsyncWebServerRequest *request)
 	auto response = new AsyncJsonResponse(false, 256);
 	auto doc = response->getRoot();
 
-	addToJsonDoc(doc, F("humidity"), hardware::instance.getHumidity());
-	addToJsonDoc(doc, F("temperatureC"), hardware::instance.getTemperatureC());
+	addToJsonDoc(doc, F("voltage"), hardware::instance.getVoltage());
+	addToJsonDoc(doc, F("current"), hardware::instance.getCurrent());
 
 	response->setLength();
 	request->send(response);
@@ -441,11 +441,11 @@ void WebServer::otherSettingsUpdate(AsyncWebServerRequest *request)
 
 	if (request->hasArg(showDisplayInF))
 	{
-		config::instance.data.showDisplayInF = !request->arg(showDisplayInF).equalsIgnoreCase(F("on"));
+		// config::instance.data.showDisplayInF = !request->arg(showDisplayInF).equalsIgnoreCase(F("on"));
 	}
 	else
 	{
-		config::instance.data.showDisplayInF = false;
+		// config::instance.data.showDisplayInF = false;
 	}
 
 	config::instance.save();
@@ -462,7 +462,7 @@ void WebServer::restartDevice(AsyncWebServerRequest *request)
 	}
 
 	request->send(200);
-	hardware::instance.showExternalMessages(F("Restarting"), String());
+	hardware::instance.setLedState(LedState::SlowBlink);
 	operations::instance.reboot();
 }
 
@@ -476,7 +476,7 @@ void WebServer::factoryReset(AsyncWebServerRequest *request)
 	}
 
 	request->send(200);
-	hardware::instance.showExternalMessages(F("Factory"), F("Reset"));
+	hardware::instance.setLedState(LedState::FastBlink);
 	operations::instance.factoryReset();
 }
 
@@ -490,7 +490,7 @@ void WebServer::rebootOnUploadComplete(AsyncWebServerRequest *request)
 	}
 
 	request->send(200);
-	hardware::instance.showExternalMessages(F("Rebooting"), String());
+	hardware::instance.setLedState(LedState::SlowBlink);
 	operations::instance.reboot();
 }
 
@@ -506,7 +506,7 @@ void WebServer::homekitReset(AsyncWebServerRequest *request)
 	config::instance.data.homeKitPairData.resize(0);
 	config::instance.save();
 	request->send(200);
-	hardware::instance.showExternalMessages(F("Rebooting"), String());
+	hardware::instance.setLedState(LedState::FastBlink);
 	operations::instance.reboot();
 }
 
@@ -661,7 +661,7 @@ void WebServer::firmwareUpdateUpload(AsyncWebServerRequest *request,
 
 		if (operations::instance.startUpdate(request->contentLength(), md5, error))
 		{
-			hardware::instance.showExternalMessages(F("Updating"), String());
+			hardware::instance.setLedState(LedState::FastBlink);
 			// success, let's make sure we end the update if the client hangs up
 			request->onDisconnect(handleEarlyUpdateDisconnect);
 		}
@@ -760,7 +760,7 @@ void WebServer::notifyTemperatureChange()
 {
 	if (events.count())
 	{
-		events.send(String(hardware::instance.getTemperatureC()).c_str(), "temperature", millis());
+		// events.send(String(hardware::instance.getTemperatureC()).c_str(), "temperature", millis());
 	}
 }
 
@@ -768,7 +768,7 @@ void WebServer::notifyHumidityChange()
 {
 	if (events.count())
 	{
-		events.send(String(hardware::instance.getHumidity()).c_str(), "humidity", millis());
+		// events.send(String(hardware::instance.getHumidity()).c_str(), "humidity", millis());
 	}
 }
 

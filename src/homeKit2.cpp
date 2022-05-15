@@ -33,15 +33,15 @@ void homeKit2::begin()
     serialNumber.toUpperCase();
 
     config::instance.addConfigSaveCallback(std::bind(&homeKit2::onConfigChange, this));
-    hardware::instance.temperatureChangeCallback.addConfigSaveCallback(std::bind(&homeKit2::notifyTemperatureChange, this));
-    hardware::instance.humidityChangeCallback.addConfigSaveCallback(std::bind(&homeKit2::notifyHumidityChange, this));
+   // hardware::instance.temperatureChangeCallback.addConfigSaveCallback(std::bind(&homeKit2::notifyTemperatureChange, this));
+   // hardware::instance.humidityChangeCallback.addConfigSaveCallback(std::bind(&homeKit2::notifyHumidityChange, this));
     chaSensorRefershInterval.setter = onSensorRefreshIntervalChange;
 
     updateChaValue(*config.accessories[FIRST_ACCESSORY]->services[INFO_SERVICE]->characteristics[SERIAL_NUMBER_CHA], serialNumber.c_str());
     notifyIPAddressChange();
     notifyWifiRssiChange();
-    notifyTemperatureChange();
-    notifyHumidityChange();
+  //  notifyTemperatureChange();
+  //  notifyHumidityChange();
     notifySensorRefreshIntervalChange();
     updateAccessoryName();
 
@@ -52,8 +52,8 @@ void homeKit2::begin()
 
     LOG_INFO(F("HomeKit Server Running"));
 
-    notifyTemperatureChange();
-    notifyHumidityChange();
+  //  notifyTemperatureChange();
+  //  notifyHumidityChange();
     notifySensorRefreshIntervalChange();
     notifyIPAddressChange();
     notifyWifiRssiChange();
@@ -82,17 +82,13 @@ void homeKit2::updateAccessoryName()
     updateChaValue(*config.accessories[FIRST_ACCESSORY]->services[INFO_SERVICE]->characteristics[NAME_CHA], accessoryName.c_str());
 }
 
-void homeKit2::notifyTemperatureChange()
-{
-    updateChaValue(chaCurrentTemperature, hardware::instance.getTemperatureC());
-    homekit_characteristic_notify(&chaCurrentTemperature, chaCurrentTemperature.value);
-}
+ 
 
-void homeKit2::notifyHumidityChange()
-{
-    updateChaValue(chaHumidity, hardware::instance.getHumidity());
-    homekit_characteristic_notify(&chaHumidity, chaHumidity.value);
-}
+// void homeKit2::notifyChaChange()
+// {
+//     updateChaValue(chaHumidity, hardware::instance.getHumidity());
+//     homekit_characteristic_notify(&chaHumidity, chaHumidity.value);
+// }
 
 void homeKit2::notifySensorRefreshIntervalChange()
 {

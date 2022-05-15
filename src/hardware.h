@@ -1,13 +1,16 @@
 #pragma once
 
-#include <Adafruit_Sensor.h>
-#include <Adafruit_SHT31.h>
-#include <Adafruit_SSD1306.h>
-#include <Wire.h>
-#include <Adafruit_GFX.h>
-#include <Adafruit_SSD1306.h>
-
+#include "Button2.h"
+#include "CSE7766.h"
 #include "changeCallback.h"
+
+enum class LedState
+{
+    On,
+    Off,
+    FastBlink,
+    SlowBlink
+};
 
 class hardware
 {
@@ -15,48 +18,53 @@ public:
     void begin();
     void loop();
 
-    float getTemperatureC() const
-    {
-        return temperature;
-    }
+    void setRelayState(bool on);
+    bool isRelayOn();
 
-    float getHumidity() const
-    {
-        return humidity;
-    }
+    double getVoltage() const { return voltage; }
+    double getCurrent() const { return current; }
+    double getActivePower() const { return activePower; }
+    double getApparentPower() const { return apparentPower; }
+    double getReactivePower() const { return reactivePower; }
+    double getEnergy() const { return energy; }
+    double getPowerFactor() const { return powerFactor; }
 
-    void showExternalMessages(const String& line1, const String& line2);
+    void setLedState(LedState ledState) {}
 
     static hardware instance;
 
-    changeCallBack temperatureChangeCallback;
-    changeCallBack humidityChangeCallback;
+    changeCallBack voltageChangeCallback;
+    changeCallBack currentChangeCallback;
+    changeCallBack activePowerChangeCallback;
+    changeCallBack apparentPowerChangeCallback;
+    changeCallBack reactivePowerChangeCallback;
+    changeCallBack energyChangeCallback;
+    changeCallBack powerFactorChangeCallback;
 
 private:
-    // DHT
-    float temperature{NAN};
-    float humidity{NAN};
+    const int ButtonPin = 0; // Sonoff On/Off button
+    const int RelayPin = 12; // Sonoff relay
+    const int LedPin = 13;   // Sonoff LED
+    const int CSE7766Rx = 1;
 
-    // SHT31
-    const int SHT31Address = 0x44;
-    Adafruit_SHT31  tempHumSensor;
+    double voltage{0};       // V
+    double current{0};       // A
+    double activePower{0};   // W
+    double apparentPower{0}; // VA
+    double reactivePower{0};
+    double energy{0}; // KWh
+    double powerFactor{0};
+
+    Button2 button;
+    CSE7766 powerChip;
     uint64_t lastRead{0};
 
-    // SSD1306
-    const int ScreenAddress = 0x3C;
-    const int SDAWire = 4;
-    const int SCLWire = 5;
-    Adafruit_SSD1306 display{128, 64, &Wire, -1};
+    static float roundPlaces(double val, int places);
+    void buttonClicked(Button2 &btn);
+    void powerChipUpdate();
 
-    bool refreshDisplay{false};
-    bool updateTempNow{true};
+    typedef double (CSE7766::*getDataFtn)();
 
-    String externalLine1;
-    String externalLine2;
-
-    bool dhtUpdate();
-    void updateDisplay();
-    void display2Lines(const String &first, const String &second);
-    static float roundPlaces(float val, int places);
-    void invertPixels();
+    void checkChanged(getDataFtn getFtn, double &existingValue,
+                      uint8_t decimalPaces, const changeCallBack &changeCallback);
 };

@@ -26,8 +26,8 @@ private:
     static void updateChaValue(homekit_characteristic_t &cha, int value);
     static void updatePassword(const char *password);
 
-    void notifyTemperatureChange();
-    void notifyHumidityChange();
+    
+    void notifyChaChange();
     void notifySensorRefreshIntervalChange();
     void notifyIPAddressChange();
     void notifyWifiRssiChange();
