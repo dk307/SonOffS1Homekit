@@ -41,8 +41,10 @@ void hardware::setRelayState(bool on)
     const auto newState = on ? HIGH : LOW;
     digitalWrite(RelayPin, newState);
 
-    config::instance.data.relayOn = newState == HIGH;
+    config::instance.data.relayOn = on;
     config::instance.save();
+
+    relayChangeCallback.callChangeListeners();
 }
 
 bool hardware::isRelayOn()
@@ -83,7 +85,7 @@ void hardware::checkChanged(getDataFtn getFtn, double &existingValue,
 void hardware::powerChipUpdate()
 {
     const auto now = millis();
-    if (now - lastRead > config::instance.data.sensorsRefreshInterval)
+    //if (now - lastRead > config::instance.data.sensorsRefreshInterval)
     {
         powerChip.handle();
 

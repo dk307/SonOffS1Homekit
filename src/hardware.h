@@ -33,6 +33,7 @@ public:
 
     static hardware instance;
 
+    changeCallBack relayChangeCallback;
     changeCallBack voltageChangeCallback;
     changeCallBack currentChangeCallback;
     changeCallBack activePowerChangeCallback;

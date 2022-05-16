@@ -51,18 +51,24 @@
             <div class="row row-cols-1 row-cols-md-2 g-4">
                 <div class="col">
                     <div class="card">
-                        <div class="card-header">Temperature</div>
+                        <div class="card-header">Relay</div>
                         <div class="card-body">
-                            <p class="card-text"><span id="temperatureC">?</span>&nbsp;C</p>
-                            <p class="card-text"><span id="temperatureF">?</span>&nbsp;F</p>
+                            <div class="card-text">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" role="switch" id="relayId"
+                                        style="transform: scale(1.5);" />
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
                 <div class="col">
                     <div class="card">
-                        <div class="card-header">Humidity</div>
+                        <div class="card-header">Power</div>
                         <div class="card-body">
-                            <p class="card-text"><span id="humidity">?</span>&nbsp;%</p>
+                            <div class="card-text">
+
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -409,7 +415,8 @@
 
         <!-- File Update Modal Start-->
         <form class="needs-validation" id="fileUploadUploadForm" method="post" enctype="multipart/form-data">
-            <div class="modal fade" id="fileUploadUpdateModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+            <div class="modal fade" id="fileUploadUpdateModal" tabindex="-1" data-bs-backdrop="static"
+                data-bs-keyboard="false">
                 <div class="modal-dialog">
                     <div class="modal-content">
                         <div class="modal-header">
@@ -463,13 +470,11 @@
             });
         }
 
-        function updateTemperature(e) {
+        function updateRelay(e) {
             var data = e.data;
             if (data != null) {
-                var tempC = parseFloat(data);
-                var tempF = tempC * 9 / 5 + 32;
-                $('#temperatureC').html(tempC);
-                $('#temperatureF').html(Math.round(tempF * 10) / 10);
+                var state = parseInt(data);
+                document.getElementById("relayId").checked = state != 0;
             }
         }
 
@@ -567,10 +572,6 @@
                     dataType: "json",
                     success: function (data) {
                         $('#ssid').val(data["ssid"]);
-                    },
-                    error: function () {
-                        $('#ssid').val('');
-                        console.warn('Failed to update');
                     }
                 });
             });
@@ -803,9 +804,22 @@
             });
         });
 
+        $("#relayId").change(function () {
+            var data = { 'relay': this.checked };
+            $.ajax({
+                url: "/api/relay/put",
+                method: "PUT",
+                data: JSON.stringify(data),
+                contentType: "application/json",
+                error: function (jqXHR, exception) {
+                    alert('Failed to change relay');
+                }
+            });
+        });
+
         $(document).ready(function () {
-            eventsSource.addEventListener("temperature", updateTemperature);
-            eventsSource.addEventListener("humidity", updateHumidity);
+            eventsSource.addEventListener("relay", updateRelay);
+            // eventsSource.addEventListener("humidity", updateHumidity);
             updateHostName();
         });
     </script>

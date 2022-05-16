@@ -2,6 +2,7 @@
 
 #include <ESPAsyncWebServer.h>
 #include <vector>
+#include <ArduinoJson.h>
 
 class WebServer
 {
@@ -41,11 +42,11 @@ private:
     static void handleEarlyUpdateDisconnect();
 
     // ajax
-    static void sensorGet(AsyncWebServerRequest *request);
     static void wifiGet(AsyncWebServerRequest *request);
     static void informationGet(AsyncWebServerRequest *request);
     static void homekitGet(AsyncWebServerRequest *request);
     static void configGet(AsyncWebServerRequest *request);
+    static void relayUpdate(AsyncWebServerRequest *request, JsonVariant &json);
 
     // helpers
     static bool isAuthenticated(AsyncWebServerRequest *request);
@@ -66,9 +67,9 @@ private:
     static void addKeyValueObject(Array &array, const K &key, const T &value);
     template <class V, class T>
     static void addToJsonDoc(V &doc, T id, float value);
-    void notifyTemperatureChange();
+    void notifyRelayChange();
     void notifyHumidityChange();
-    bool sendLogs(const String& data);
+    bool sendLogs(const String &data);
 
     AsyncWebServer httpServer{80};
     AsyncEventSource events{"/events"};

@@ -105,8 +105,8 @@
   }
 
   double CSE7766::getReactivePower() {
-      double active = getActivePower();
-      double apparent = getApparentPower();
+      const double active = getActivePower();
+      const double apparent = getApparentPower();
       if (apparent > active) {
           return sqrt(apparent * apparent - active * active);
       } else {

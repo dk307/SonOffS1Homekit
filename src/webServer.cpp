@@ -68,8 +68,9 @@ void WebServer::begin()
 	serverRouting();
 	LOG_INFO(F("WebServer Started"));
 
-	//hardware::instance.temperatureChangeCallback.addConfigSaveCallback(std::bind(&WebServer::notifyTemperatureChange, this));
-	//hardware::instance.humidityChangeCallback.addConfigSaveCallback(std::bind(&WebServer::notifyHumidityChange, this));
+	hardware::instance.relayChangeCallback.addConfigSaveCallback(std::bind(&WebServer::notifyRelayChange, this));
+	// hardware::instance.voltageChangeCallback.addConfigSaveCallback(std::bind(&WebServer::notifyValueChange, this));
+	// hardware::instance.humidityChangeCallback.addConfigSaveCallback(std::bind(&WebServer::notifyHumidityChange, this));
 }
 
 bool WebServer::manageSecurity(AsyncWebServerRequest *request)
@@ -111,11 +112,14 @@ void WebServer::serverRouting()
 	httpServer.on(("/restart.handler"), HTTP_POST, restartDevice);
 
 	// json ajax calls
-	httpServer.on(("/api/sensor/get"), HTTP_GET, sensorGet);
 	httpServer.on(("/api/wifi/get"), HTTP_GET, wifiGet);
 	httpServer.on(("/api/information/get"), HTTP_GET, informationGet);
 	httpServer.on(("/api/homekit/get"), HTTP_GET, homekitGet);
 	httpServer.on(("/api/config/get"), HTTP_GET, configGet);
+
+	auto relayUpdateHandler = new AsyncCallbackJsonWebHandler("/api/relay/put", relayUpdate, 128);
+	relayUpdateHandler->setMethod(HTTP_PUT);
+	httpServer.addHandler(relayUpdateHandler);
 
 	httpServer.onNotFound(handleFileRead);
 }
@@ -130,8 +134,8 @@ void WebServer::onEventConnect(AsyncEventSourceClient *client)
 	{
 		LOG_INFO(F("Events client first time"));
 		// send all the events
-		notifyTemperatureChange();
-		notifyHumidityChange();
+		notifyRelayChange();
+		// notifyHumidityChange();
 	}
 }
 
@@ -175,6 +179,30 @@ void WebServer::wifiUpdate(AsyncWebServerRequest *request)
 		WifiManager::instance.setNewWifi(request->arg(SsidParameter), request->arg(PasswordParameter));
 		redirectToRoot(request);
 		return;
+	}
+	else
+	{
+		handleError(request, F("Required parameters not provided"), 400);
+	}
+}
+
+void WebServer::relayUpdate(AsyncWebServerRequest *request, JsonVariant &json)
+{
+	const auto RelayParameter = F("relay");
+
+	LOG_INFO(F("Relay Update"));
+
+	if (!manageSecurity(request))
+	{
+		return;
+	}
+
+	if (json.is<JsonObject>())
+	{
+		auto data = json.as<JsonObject>();
+		auto value = data[RelayParameter].as<bool>();
+		hardware::instance.setRelayState(value);
+		request->send(200);
 	}
 	else
 	{
@@ -284,23 +312,6 @@ void WebServer::addToJsonDoc(V &doc, T id, float value)
 	{
 		doc[id] = serialized(String(value, 2));
 	}
-}
-
-void WebServer::sensorGet(AsyncWebServerRequest *request)
-{
-	LOG_DEBUG(F("/api/sensor/get"));
-	if (!manageSecurity(request))
-	{
-		return;
-	}
-	auto response = new AsyncJsonResponse(false, 256);
-	auto doc = response->getRoot();
-
-	addToJsonDoc(doc, F("voltage"), hardware::instance.getVoltage());
-	addToJsonDoc(doc, F("current"), hardware::instance.getCurrent());
-
-	response->setLength();
-	request->send(response);
 }
 
 // Check if header is present and correct
@@ -420,7 +431,6 @@ void WebServer::otherSettingsUpdate(AsyncWebServerRequest *request)
 {
 	const auto hostName = F("hostName");
 	const auto sensorsRefreshInterval = F("sensorsRefreshInterval");
-	const auto showDisplayInF = F("showDisplayInF");
 
 	LOG_INFO(F("config Update"));
 
@@ -437,15 +447,6 @@ void WebServer::otherSettingsUpdate(AsyncWebServerRequest *request)
 	if (request->hasArg(sensorsRefreshInterval))
 	{
 		config::instance.data.sensorsRefreshInterval = request->arg(sensorsRefreshInterval).toInt() * 1000;
-	}
-
-	if (request->hasArg(showDisplayInF))
-	{
-		// config::instance.data.showDisplayInF = !request->arg(showDisplayInF).equalsIgnoreCase(F("on"));
-	}
-	else
-	{
-		// config::instance.data.showDisplayInF = false;
 	}
 
 	config::instance.save();
@@ -756,11 +757,11 @@ void WebServer::handleEarlyUpdateDisconnect()
 	operations::instance.abortUpdate();
 }
 
-void WebServer::notifyTemperatureChange()
+void WebServer::notifyRelayChange()
 {
 	if (events.count())
 	{
-		// events.send(String(hardware::instance.getTemperatureC()).c_str(), "temperature", millis());
+		events.send(String(hardware::instance.isRelayOn()).c_str(), "relay", millis());
 	}
 }
 
