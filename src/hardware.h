@@ -25,7 +25,6 @@ public:
     double getCurrent() const { return current; }
     double getActivePower() const { return activePower; }
     double getApparentPower() const { return apparentPower; }
-    double getReactivePower() const { return reactivePower; }
     double getEnergy() const { return energy; }
     double getPowerFactor() const { return powerFactor; }
 
@@ -38,9 +37,15 @@ public:
     changeCallBack currentChangeCallback;
     changeCallBack activePowerChangeCallback;
     changeCallBack apparentPowerChangeCallback;
-    changeCallBack reactivePowerChangeCallback;
     changeCallBack energyChangeCallback;
     changeCallBack powerFactorChangeCallback;
+
+    static const int VoltageRoundPlaces = 0;
+    static const int CurrentRoundPlaces = 3;
+    static const int ActivePowerRoundPlaces = 0;
+    static const int ApparentPowerRoundPlaces = 0;
+    static const int EnergyPowerRoundPlaces = 2;
+    static const int PowerFactorRoundPaces = 2;
 
 private:
     const int ButtonPin = 0; // Sonoff On/Off button
@@ -52,7 +57,6 @@ private:
     double current{0};       // A
     double activePower{0};   // W
     double apparentPower{0}; // VA
-    double reactivePower{0};
     double energy{0}; // KWh
     double powerFactor{0};
 

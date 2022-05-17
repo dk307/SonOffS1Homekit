@@ -38,6 +38,7 @@ void hardware::buttonClicked(Button2 &btn)
 
 void hardware::setRelayState(bool on)
 {
+    LOG_DEBUG("Setting Relay state to " << on);
     const auto newState = on ? HIGH : LOW;
     digitalWrite(RelayPin, newState);
 
@@ -85,17 +86,16 @@ void hardware::checkChanged(getDataFtn getFtn, double &existingValue,
 void hardware::powerChipUpdate()
 {
     const auto now = millis();
-    //if (now - lastRead > config::instance.data.sensorsRefreshInterval)
+    // if (now - lastRead > config::instance.data.sensorsRefreshInterval)
     {
         powerChip.handle();
 
-        checkChanged(&CSE7766::getVoltage, voltage, 1, voltageChangeCallback);
-        checkChanged(&CSE7766::getCurrent, current, 4, currentChangeCallback);
-        checkChanged(&CSE7766::getActivePower, activePower, 2, activePowerChangeCallback);
-        checkChanged(&CSE7766::getApparentPower, apparentPower, 2, apparentPowerChangeCallback);
-        checkChanged(&CSE7766::getReactivePower, reactivePower, 2, reactivePowerChangeCallback);
-        checkChanged(&CSE7766::getEnergy, energy, 3, energyChangeCallback);
-        checkChanged(&CSE7766::getPowerRatio, powerFactor, 3, powerFactorChangeCallback);
+        checkChanged(&CSE7766::getVoltage, voltage, VoltageRoundPlaces, voltageChangeCallback);
+        checkChanged(&CSE7766::getCurrent, current, CurrentRoundPlaces, currentChangeCallback);
+        checkChanged(&CSE7766::getActivePower, activePower, ActivePowerRoundPlaces, activePowerChangeCallback);
+        checkChanged(&CSE7766::getApparentPower, apparentPower, ApparentPowerRoundPlaces, apparentPowerChangeCallback);
+        checkChanged(&CSE7766::getPowerRatio, powerFactor, PowerFactorRoundPaces, powerFactorChangeCallback);
+        checkChanged(&CSE7766::getEnergyKwh, energy, EnergyPowerRoundPlaces, energyChangeCallback);
 
         lastRead = now;
     }

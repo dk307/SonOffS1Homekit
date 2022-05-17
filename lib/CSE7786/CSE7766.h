@@ -8,7 +8,7 @@
 #define CSE7766_h
 
 #include "Arduino.h"
-#include "debug.h"
+#include <energy.h>
 #include <SoftwareSerial.h>
 
 #ifndef CSE7766_PIN
@@ -45,7 +45,7 @@ public:
 // ---------------------------------------------------------------------
 
   CSE7766();
-  virtual ~CSE7766();
+  ~CSE7766();
   void setRX(unsigned char pin_rx);
   void setInverted(bool inverted);
   unsigned char getRX();
@@ -67,7 +67,8 @@ public:
   double getApparentPower(); // _voltage * _current;
   double getReactivePower();
   double getPowerFactor(); //((_voltage > 0) && (_current > 0)) ? 100 * _active / _voltage / _current : 100;
-  double getEnergy(); //_energy
+  const Energy& getEnergy(); //_energy
+  double getEnergyKwh(); //_energy
 
   void begin();
   void handle();
@@ -88,7 +89,7 @@ private:
   double _active = 0;
   double _voltage = 0;
   double _current = 0;
-  double _energy = 0;
+  Energy _energy;
 
   double _ratioV = 1.0;
   double _ratioC = 1.0;

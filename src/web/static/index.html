@@ -67,7 +67,32 @@
                         <div class="card-header">Power</div>
                         <div class="card-body">
                             <div class="card-text">
-
+                                <table class="table table-borderless">
+                                    <tr>
+                                        <td>Voltage(V)</td>
+                                        <td id="voltage"></td>
+                                    </tr>
+                                    <tr>
+                                        <td>Current(A)</td>
+                                        <td id="current"></td>
+                                    </tr>
+                                    <tr>
+                                        <td>Power(W)</td>
+                                        <td id="activepower"></td>
+                                    </tr>
+                                    <tr>
+                                        <td>Apparent Power(VA)</td>
+                                        <td id="apparentpower"></td>
+                                    </tr>
+                                    <tr>
+                                        <td>Energy(Kwh)</td>
+                                        <td id="energy"></td>
+                                    </tr>
+                                    <tr>
+                                        <td>Power Factor</td>
+                                        <td id="powerfactor"></td>
+                                    </tr>
+                                </table>
                             </div>
                         </div>
                     </div>
@@ -478,12 +503,8 @@
             }
         }
 
-        function updateHumidity(e) {
-            var data = e.data;
-            if (data != null) {
-                var hum = parseFloat(data);
-                $('#humidity').html(hum);
-            }
+        function updateValue(e) {
+            $('#' + e.type).html(e.data);
         }
 
         function updateInformation() {
@@ -819,7 +840,12 @@
 
         $(document).ready(function () {
             eventsSource.addEventListener("relay", updateRelay);
-            // eventsSource.addEventListener("humidity", updateHumidity);
+            eventsSource.addEventListener("voltage", updateValue);
+            eventsSource.addEventListener("current", updateValue);
+            eventsSource.addEventListener("activepower", updateValue);
+            eventsSource.addEventListener("apparentpower", updateValue);
+            eventsSource.addEventListener("energy", updateValue);
+            eventsSource.addEventListener("powerfactor", updateValue);
             updateHostName();
         });
     </script>

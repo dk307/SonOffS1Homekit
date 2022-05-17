@@ -13,7 +13,7 @@ void WifiManager::begin()
 
     if (rfcName.isEmpty())
     {
-        rfcName = F("ESP-") + String(ESP.getChipId(), HEX);
+        rfcName = F("S31-") + String(ESP.getChipId(), HEX);
     }
 
     rfcName = getRFC952Hostname(rfcName);

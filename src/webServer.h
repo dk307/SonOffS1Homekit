@@ -4,6 +4,8 @@
 #include <vector>
 #include <ArduinoJson.h>
 
+#include "hardware.h"
+
 class WebServer
 {
 public:
@@ -68,7 +70,8 @@ private:
     template <class V, class T>
     static void addToJsonDoc(V &doc, T id, float value);
     void notifyRelayChange();
-    void notifyHumidityChange();
+    typedef double (hardware::*getValueFtn)() const;
+    void notifyPowerValueChange(const char * valueName, getValueFtn ftn, const int roundPlaces);
     bool sendLogs(const String &data);
 
     AsyncWebServer httpServer{80};

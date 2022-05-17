@@ -14,6 +14,14 @@
 #include "logging.h"
 #include "web.h"
 
+static const char Voltage[] = "voltage";
+static const char Current[] = "current";
+static const char ActivePower[] = "activepower";
+static const char ApparentPower[] = "apparentpower";
+static const char ReactivePower[] = "reactivepower";
+static const char Energy[] = "energy";
+static const char PowerFactor[] = "powerfactor";
+
 typedef struct
 {
 	const char *Path;
@@ -69,8 +77,16 @@ void WebServer::begin()
 	LOG_INFO(F("WebServer Started"));
 
 	hardware::instance.relayChangeCallback.addConfigSaveCallback(std::bind(&WebServer::notifyRelayChange, this));
-	// hardware::instance.voltageChangeCallback.addConfigSaveCallback(std::bind(&WebServer::notifyValueChange, this));
-	// hardware::instance.humidityChangeCallback.addConfigSaveCallback(std::bind(&WebServer::notifyHumidityChange, this));
+	hardware::instance.voltageChangeCallback.addConfigSaveCallback(
+		std::bind(&WebServer::notifyPowerValueChange, this, Voltage, &hardware::getVoltage, hardware::VoltageRoundPlaces));
+	hardware::instance.currentChangeCallback.addConfigSaveCallback(
+		std::bind(&WebServer::notifyPowerValueChange, this, Current, &hardware::getCurrent, hardware::CurrentRoundPlaces));
+	hardware::instance.activePowerChangeCallback.addConfigSaveCallback(
+		std::bind(&WebServer::notifyPowerValueChange, this, ActivePower, &hardware::getActivePower, hardware::ActivePowerRoundPlaces));
+	hardware::instance.apparentPowerChangeCallback.addConfigSaveCallback(
+		std::bind(&WebServer::notifyPowerValueChange, this, ApparentPower, &hardware::getApparentPower, hardware::ApparentPowerRoundPlaces));
+	hardware::instance.powerFactorChangeCallback.addConfigSaveCallback(
+		std::bind(&WebServer::notifyPowerValueChange, this, PowerFactor, &hardware::getPowerFactor, hardware::PowerFactorRoundPaces));
 }
 
 bool WebServer::manageSecurity(AsyncWebServerRequest *request)
@@ -135,7 +151,12 @@ void WebServer::onEventConnect(AsyncEventSourceClient *client)
 		LOG_INFO(F("Events client first time"));
 		// send all the events
 		notifyRelayChange();
-		// notifyHumidityChange();
+		notifyPowerValueChange(Voltage, &hardware::getVoltage, hardware::VoltageRoundPlaces);
+		notifyPowerValueChange(Current, &hardware::getCurrent, hardware::CurrentRoundPlaces);
+		notifyPowerValueChange(ActivePower, &hardware::getActivePower, hardware::ActivePowerRoundPlaces);
+		notifyPowerValueChange(ApparentPower, &hardware::getApparentPower, hardware::ApparentPowerRoundPlaces);
+		notifyPowerValueChange(Energy, &hardware::getEnergy, hardware::EnergyPowerRoundPlaces);
+		notifyPowerValueChange(PowerFactor, &hardware::getPowerFactor, hardware::PowerFactorRoundPaces);
 	}
 }
 
@@ -765,11 +786,12 @@ void WebServer::notifyRelayChange()
 	}
 }
 
-void WebServer::notifyHumidityChange()
+void WebServer::notifyPowerValueChange(const char *valueName, getValueFtn ftn, const int roundPaces)
 {
 	if (events.count())
 	{
-		// events.send(String(hardware::instance.getHumidity()).c_str(), "humidity", millis());
+		const auto value = (hardware::instance.*ftn)();
+		events.send(String(value, roundPaces).c_str(), valueName, millis());
 	}
 }
 
