@@ -6,6 +6,7 @@
 #include "logging.h"
 
 #include "configManager.h"
+#include "rtcmem.h"
 
 static const char ConfigFilePath[] PROGMEM = "/Config.json";
 static const char ConfigChecksumFilePath[] PROGMEM = "/ConfigChecksum.json";
@@ -14,7 +15,7 @@ static const char WebUserNameId[] PROGMEM = "webusername";
 static const char WebPasswordId[] PROGMEM = "webpassword";
 static const char HomeKitPairDataId[] PROGMEM = "homekitpairdata";
 static const char SensorsRefreshIntervalId[] PROGMEM = "sensorsrefreshinterval";
-static const char RelayOnId[] PROGMEM = "relayon";
+static const char RtcMemoryId[] PROGMEM = "rtcmemory";
 
 config config::instance;
 
@@ -50,6 +51,8 @@ void config::erase()
 
 bool config::begin()
 {
+    rtcmemSetup();
+
     const auto configData = readFile(FPSTR(ConfigFilePath));
 
     if (configData.isEmpty())
@@ -81,7 +84,6 @@ bool config::begin()
     data.webUserName = jsonDocument[FPSTR(WebUserNameId)].as<String>();
     data.webPassword = jsonDocument[FPSTR(WebPasswordId)].as<String>();
     data.sensorsRefreshInterval = jsonDocument[FPSTR(SensorsRefreshIntervalId)].as<uint64_t>();
-    data.relayOn = jsonDocument[FPSTR(RelayOnId)].as<bool>();
 
     const auto encodedHomeKitData = jsonDocument[FPSTR(HomeKitPairDataId)].as<String>();
 
@@ -121,7 +123,6 @@ void config::save()
 
     jsonDocument[FPSTR(HomeKitPairDataId)] = encodedData.get();
     jsonDocument[FPSTR(SensorsRefreshIntervalId)] = data.sensorsRefreshInterval;
-    jsonDocument[FPSTR(RelayOnId)] = data.relayOn;
 
     String json;
     serializeJson(jsonDocument, json);
@@ -210,4 +211,24 @@ bool config::deserializeToJson(const T &data, DynamicJsonDocument &jsonDocument)
         return false;
     }
     return true;
+}
+
+void config::setRelayState(bool state)
+{
+    Rtcmem->relay = state;
+}
+bool config::getRelayState() const
+{
+    return (rtcmemStatus()) ? Rtcmem->relay : false;
+}
+
+void config::setEnergyState(const Energy &state)
+{
+    Rtcmem->energy.kwh = state.kwh.value;
+    Rtcmem->energy.ws = state.ws.value;
+}
+
+Energy config::getEnergyState() const
+{
+    return (rtcmemStatus()) ? Energy(Rtcmem->energy.kwh, Rtcmem->energy.ws) : Energy();
 }
