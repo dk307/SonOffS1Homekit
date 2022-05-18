@@ -63,6 +63,7 @@ private:
     Button2 button;
     CSE7766 powerChip;
     uint64_t lastRead{0};
+    uint64_t lastEnergySaved{0};
 
     static float roundPlaces(double val, int places);
     void buttonClicked(Button2 &btn);

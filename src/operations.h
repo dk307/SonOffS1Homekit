@@ -2,7 +2,6 @@
 
 #include <Arduino.h>
 
-class MultiResetDetector;
 
 class operations
 {
@@ -27,8 +26,6 @@ private:
     bool beginFS();
     void getUpdateError(String &error);
     [[noreturn]] static void reset();
-
-    MultiResetDetector *mrd = nullptr;
 
     bool rebootPending{false};
 };

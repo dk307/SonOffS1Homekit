@@ -3,18 +3,27 @@
 #include <LittleFS.h>
 #include <base64.h> // from esphap
 #include <MD5Builder.h>
+#include <user_interface.h>
 #include "logging.h"
 
 #include "configManager.h"
 
-static const char ConfigFilePath[] PROGMEM = "/Config.json";
-static const char ConfigChecksumFilePath[] PROGMEM = "/ConfigChecksum.json";
+// Base address of USER RTC memory
+// https://github.com/esp8266/esp8266-wiki/wiki/Memory-Map#memmory-mapped-io-registers
+#define RTCMEM_ADDR_BASE (0x60001200)
+#define RTCMEM_OFFSET 32u
+#define RTCMEM_ADDR (RTCMEM_ADDR_BASE + (RTCMEM_OFFSET * 4u))
+#define RTCMEM_BLOCKS 96u
+#define RTCMEM_MAGIC 0xA4535574 // Change this when modifying RtcmemData
+
+static const char RtcConfigFilePath[] PROGMEM = "/rtc.bin";
+static const char ConfigFilePath[] PROGMEM = "/conf.json";
+static const char ConfigChecksumFilePath[] PROGMEM = "/confchksum.json";
 static const char HostNameId[] PROGMEM = "hostname";
 static const char WebUserNameId[] PROGMEM = "webusername";
 static const char WebPasswordId[] PROGMEM = "webpassword";
 static const char HomeKitPairDataId[] PROGMEM = "homekitpairdata";
 static const char SensorsRefreshIntervalId[] PROGMEM = "sensorsrefreshinterval";
-static const char RelayOnId[] PROGMEM = "relayon";
 
 config config::instance;
 
@@ -42,14 +51,24 @@ size_t config::writeToFile(const String &fileName, T &&...contents)
     return bytesWritten;
 }
 
+config::config() : Rtcmem(reinterpret_cast<volatile config::RtcmemData *>(RTCMEM_ADDR))
+{
+}
+
 void config::erase()
 {
+    Rtcmem->magic = 0;
+    LittleFS.remove(FPSTR(RtcConfigFilePath));
     LittleFS.remove(FPSTR(ConfigChecksumFilePath));
     LittleFS.remove(FPSTR(ConfigFilePath));
 }
 
 bool config::begin()
 {
+    static_assert(sizeof(config::RtcmemData) <= (RTCMEM_BLOCKS * 4u), "RTCMEM struct is too big");
+
+    rtcmemSetup();
+
     const auto configData = readFile(FPSTR(ConfigFilePath));
 
     if (configData.isEmpty())
@@ -81,7 +100,6 @@ bool config::begin()
     data.webUserName = jsonDocument[FPSTR(WebUserNameId)].as<String>();
     data.webPassword = jsonDocument[FPSTR(WebPasswordId)].as<String>();
     data.sensorsRefreshInterval = jsonDocument[FPSTR(SensorsRefreshIntervalId)].as<uint64_t>();
-    data.relayOn = jsonDocument[FPSTR(RelayOnId)].as<bool>();
 
     const auto encodedHomeKitData = jsonDocument[FPSTR(HomeKitPairDataId)].as<String>();
 
@@ -121,7 +139,6 @@ void config::save()
 
     jsonDocument[FPSTR(HomeKitPairDataId)] = encodedData.get();
     jsonDocument[FPSTR(SensorsRefreshIntervalId)] = data.sensorsRefreshInterval;
-    jsonDocument[FPSTR(RelayOnId)] = data.relayOn;
 
     String json;
     serializeJson(jsonDocument, json);
@@ -145,6 +162,14 @@ void config::save()
 
 void config::loop()
 {
+    const auto now = millis();
+    const int rtcSaveInterval = 60 * 60 * 1000; // 1hr
+    if ((now - lastRtcSavedToFash >= rtcSaveInterval) || requestSave)
+    {
+        tryWriteRtcMemoryToFlash();
+        lastRtcSavedToFash = now;
+    }
+
     if (requestSave)
     {
         requestSave = false;
@@ -210,4 +235,100 @@ bool config::deserializeToJson(const T &data, DynamicJsonDocument &jsonDocument)
         return false;
     }
     return true;
+}
+
+void config::setRelayState(bool state)
+{
+    Rtcmem->relay = state;
+    tryWriteRtcMemoryToFlash();
+}
+
+bool config::getRelayState() const
+{
+    return Rtcmem->relay;
+}
+
+void config::setEnergyState(const Energy &state)
+{
+    Rtcmem->energy.kwh = state.kwh.value;
+    Rtcmem->energy.ws = state.ws.value;
+}
+
+Energy config::getEnergyState() const
+{
+    return Energy(Rtcmem->energy.kwh, Rtcmem->energy.ws);
+}
+
+void config::rtcmemSetup()
+{
+    bool rtcmemStatus = false;
+    const auto resetInfo = ESP.getResetInfoPtr();
+    switch (resetInfo->reason)
+    {
+    case REASON_EXT_SYS_RST:
+    case REASON_WDT_RST:
+    case REASON_EXCEPTION_RST:
+        break;
+
+    case REASON_DEFAULT_RST:
+        rtcmemStatus = tryReadRtcMemoryFromFlash();
+        break;
+    default:
+        rtcmemStatus = RTCMEM_MAGIC == Rtcmem->magic;
+        break;
+    }
+
+    if (!rtcmemStatus)
+    {
+        auto ptr = reinterpret_cast<volatile uint32_t *>(RTCMEM_ADDR);
+        const auto end = ptr + RTCMEM_BLOCKS;
+        do
+        {
+            *ptr = 0;
+        } while (++ptr != end);
+
+        Rtcmem->magic = RTCMEM_MAGIC;
+    }
+    else
+    {
+        LOG_DEBUG(F("Using Rtc Memory values"));
+        copyRtcMemory(const_cast<RtcmemData *>(Rtcmem), &lastSavedToFlash);
+    }
+}
+
+void config::tryWriteRtcMemoryToFlash()
+{
+    RtcmemData copy;
+    copyRtcMemory(const_cast<RtcmemData *>(Rtcmem), &copy);
+    if (writeToFile(FPSTR(RtcConfigFilePath), reinterpret_cast<uint8_t *>(&copy), sizeof(copy)) == sizeof(copy))
+    {
+        LOG_INFO(F("Saved Rtc Memory to Flash"));
+        copyRtcMemory(&copy, &lastSavedToFlash);
+    }
+}
+
+bool config::tryReadRtcMemoryFromFlash()
+{
+    File f = LittleFS.open(FPSTR(RtcConfigFilePath), "r");
+    if (f)
+    {
+        RtcmemData copy;
+        if (f.size() == sizeof(copy))
+        {
+            const auto bytesRead =  f.readBytes(reinterpret_cast<char *>(&copy), sizeof(copy));
+            f.close();
+
+            copyRtcMemory(&copy, const_cast<RtcmemData *>(Rtcmem));
+            return (bytesRead == sizeof(copy)) && (Rtcmem->magic == RTCMEM_MAGIC);
+        }
+    }
+    return false;
+}
+
+void config::copyRtcMemory(const RtcmemData *source, RtcmemData *dest)
+{
+    dest->magic = source->magic;
+    dest->relay = source->relay;
+    dest->energy.kwh = source->energy.kwh;
+    dest->energy.ws = source->energy.ws;
 }

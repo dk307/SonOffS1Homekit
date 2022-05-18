@@ -13,7 +13,6 @@
 #define MRD_TIMEOUT 10
 #define MRD_ADDRESS 0
 #define MULTIRESETDETECTOR_DEBUG false
-#include <ESP_MultiResetDetector.h>
 
 #include "WiFiManager.h"
 #include "configManager.h"
@@ -26,26 +25,14 @@ void operations::factoryReset()
 	LOG_INFO(F("Doing Factory Reset"));
 	ESP.eraseConfig();
 	system_restore();
-	config::erase();
+	config::instance.erase();
 	LittleFS.format();
 	reset();
 }
 
 void operations::begin()
 {
-	mrd = new MultiResetDetector(MRD_TIMEOUT, MRD_ADDRESS);
-
-	if (mrd->detectMultiReset())
-	{
-		LOG_WARNING(F("Detected Multi Reset Event!!!!"));
-		factoryReset();
-	}
-	else
-	{
-		LOG_INFO(F("Not detected Multi Reset Event"));
-	}
 	beginFS();
-
 	Update.runAsync(true);
 }
 
@@ -167,16 +154,6 @@ void operations::getUpdateError(String &error)
 
 void operations::loop()
 {
-	if (mrd)
-	{
-		mrd->loop();
-		if (!mrd->waitingForMRD())
-		{
-			delete mrd;
-			mrd = nullptr;
-		}
-	}
-
 	if (rebootPending)
 	{
 		rebootPending = false;

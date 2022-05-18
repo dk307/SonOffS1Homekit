@@ -21,7 +21,7 @@ void hardware::begin()
     pinMode(LedPin, OUTPUT);   // led
 
     digitalWrite(LedPin, LOW); // always on
-    digitalWrite(RelayPin, config::instance.data.relayOn ? HIGH : LOW);
+    digitalWrite(RelayPin, config::instance.getRelayState() ? HIGH : LOW);
 
     button.begin(ButtonPin);
     button.setReleasedHandler(std::bind(&hardware::buttonClicked, this, std::placeholders::_1));
@@ -38,13 +38,11 @@ void hardware::buttonClicked(Button2 &btn)
 
 void hardware::setRelayState(bool on)
 {
-    LOG_DEBUG("Setting Relay state to " << on);
+    LOG_INFO("Setting Relay state to " << on);
     const auto newState = on ? HIGH : LOW;
     digitalWrite(RelayPin, newState);
 
-    config::instance.data.relayOn = on;
-    config::instance.save();
-
+    config::instance.setRelayState(on);
     relayChangeCallback.callChangeListeners();
 }
 
@@ -98,5 +96,12 @@ void hardware::powerChipUpdate()
         checkChanged(&CSE7766::getEnergyKwh, energy, EnergyPowerRoundPlaces, energyChangeCallback);
 
         lastRead = now;
+    }
+
+    const int MaxRtcSave = 2000;  // 2s
+    if (now - lastEnergySaved > MaxRtcSave)
+    {
+        config::instance.setEnergyState(powerChip.getEnergy());
+        lastEnergySaved = now;
     }
 }
