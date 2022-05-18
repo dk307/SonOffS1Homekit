@@ -1,7 +1,9 @@
 #pragma once
 #include "changeCallBack.h"
-
 #include <ArduinoJson.h>
+#include <Energy.h>
+
+#include <memory>
 
 class DataStorage
 {
@@ -46,26 +48,53 @@ public:
     void reset();
     void loop();
 
-    static void erase();
+    void erase();
     static config instance;
 
     String getAllConfigAsJson();
+
+    void setRelayState(bool state);
+    bool getRelayState() const;
+
+    void setEnergyState(const Energy &state);
+    Energy getEnergyState() const;
 
     // does not restore to memory, needs reboot
     bool restoreAllConfigAsJson(const std::vector<uint8_t> &json, const String &md5);
 
 private:
-    config() {}
+    struct RtcmemEnergy
+    {
+        uint32_t kwh;
+        uint32_t ws;
+    };
+
+    struct RtcmemData
+    {
+        uint32_t magic;
+        uint32_t relay;
+        RtcmemEnergy energy;
+    };
+
+    bool requestSave{false};
+    volatile RtcmemData *Rtcmem;
+    RtcmemData lastSavedToFlash;
+    uint64_t lastRtcSavedToFash{0};
+
+    config();
     static String readFile(const String &fileName);
 
     template <class... T>
-    static String md5Hash(T&&... data);
+    static String md5Hash(T &&...data);
 
     template <class... T>
-    static size_t writeToFile(const String &fileName, T&&... contents);
+    static size_t writeToFile(const String &fileName, T &&...contents);
 
-    template<class T>
+    template <class T>
     bool deserializeToJson(const T &data, DynamicJsonDocument &jsonDocument);
 
-    bool requestSave{false};
+    void rtcmemSetup();
+    bool tryReadRtcMemoryFromFlash();
+    void tryWriteRtcMemoryToFlash();
+    static void copyRtcMemory(const RtcmemData * source, RtcmemData * dest);
 };
