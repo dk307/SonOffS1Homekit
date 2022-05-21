@@ -26,23 +26,23 @@ private:
     static void updateChaValue(homekit_characteristic_t &cha, int value);
     static void updatePassword(const char *password);
 
-    
-    void notifyChaChange();
-    void notifySensorRefreshIntervalChange();
+    template<class T>
+    void notifyChaValue(homekit_characteristic_t &cha, T&& value);
+
+    void notifyConfigValueChanges();
     void notifyIPAddressChange();
     void notifyWifiRssiChange();
     void updateAccessoryName();
 
     void onConfigChange();
-    static void onSensorRefreshIntervalChange(const homekit_value_t);
+    static void onReportSendIntervalChange(const homekit_value_t);
 
     String accessoryName;
     String password;
     String serialNumber;
     String localIP;
     int rssi;
-    bool notifyTemp;
-    uint64_t sensorRefreshInterval;
+
     uint64_t lastCheckedForNonEvents{0};
 };
 

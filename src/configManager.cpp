@@ -23,9 +23,18 @@ static const char HostNameId[] PROGMEM = "hostname";
 static const char WebUserNameId[] PROGMEM = "webusername";
 static const char WebPasswordId[] PROGMEM = "webpassword";
 static const char HomeKitPairDataId[] PROGMEM = "homekitpairdata";
-static const char SensorsRefreshIntervalId[] PROGMEM = "sensorsrefreshinterval";
 
-config config::instance;
+static const char MaxPowerId[] PROGMEM = "maxpower";
+static const char MaxPowerHoldId[] PROGMEM = "maxpowerhold";
+static const char ReportSendIntervalId[] PROGMEM = "reportsendinterval";
+static const char WattageThresholdId[] PROGMEM = "wattagethreshold";
+static const char WattagePercentThresholdId[] PROGMEM = "wattagepercentthreshold";
+static const char PowerPercentThresholdId[] PROGMEM = "powerpercentthreshold";
+static const char CurrentCalibrationRatioId[] PROGMEM = "currentcalibrationratio";
+static const char VoltageCalibrationRatioId[] PROGMEM = "voltagecalibrationratio";
+static const char PowerCalibrationRatioId[] PROGMEM = "powercalibrationratio";
+
+config __attribute__((init_priority(101))) config::instance;
 
 template <class... T>
 String config::md5Hash(T &&...data)
@@ -99,7 +108,17 @@ bool config::begin()
     data.hostName = jsonDocument[FPSTR(HostNameId)].as<String>();
     data.webUserName = jsonDocument[FPSTR(WebUserNameId)].as<String>();
     data.webPassword = jsonDocument[FPSTR(WebPasswordId)].as<String>();
-    data.sensorsRefreshInterval = jsonDocument[FPSTR(SensorsRefreshIntervalId)].as<uint64_t>();
+
+    data.reportSendInterval = jsonDocument[FPSTR(ReportSendIntervalId)].as<uint64_t>();
+    data.wattageThreshold = jsonDocument[FPSTR(WattageThresholdId)].as<uint16_t>();
+    data.wattagePercentThreshold = jsonDocument[FPSTR(WattagePercentThresholdId)].as<uint8_t>();
+
+    data.maxPower = jsonDocument[FPSTR(MaxPowerId)].as<uint16_t>();
+    data.maxPowerHold = jsonDocument[FPSTR(MaxPowerHoldId)].as<uint16_t>();
+
+    data.voltageCalibrationRatio = jsonDocument[FPSTR(VoltageCalibrationRatioId)].as<float>();
+    data.currentCalibrationRatio = jsonDocument[FPSTR(CurrentCalibrationRatioId)].as<float>();
+    data.powerCalibrationRatio = jsonDocument[FPSTR(PowerCalibrationRatioId)].as<float>();
 
     const auto encodedHomeKitData = jsonDocument[FPSTR(HomeKitPairDataId)].as<String>();
 
@@ -138,7 +157,17 @@ void config::save()
     base64_encode_(data.homeKitPairData.data(), data.homeKitPairData.size(), encodedData.get());
 
     jsonDocument[FPSTR(HomeKitPairDataId)] = encodedData.get();
-    jsonDocument[FPSTR(SensorsRefreshIntervalId)] = data.sensorsRefreshInterval;
+    jsonDocument[FPSTR(ReportSendIntervalId)] = data.reportSendInterval;
+
+    jsonDocument[FPSTR(MaxPowerId)] = data.maxPower;
+    jsonDocument[FPSTR(MaxPowerHoldId)] = data.maxPowerHold;
+
+    jsonDocument[FPSTR(WattageThresholdId)] = data.wattageThreshold;
+    jsonDocument[FPSTR(WattagePercentThresholdId)] = data.wattagePercentThreshold;
+
+    jsonDocument[FPSTR(VoltageCalibrationRatioId)] = data.voltageCalibrationRatio;
+    jsonDocument[FPSTR(CurrentCalibrationRatioId)] = data.currentCalibrationRatio;
+    jsonDocument[FPSTR(PowerCalibrationRatioId)] = data.powerCalibrationRatio;
 
     String json;
     serializeJson(jsonDocument, json);
@@ -315,7 +344,7 @@ bool config::tryReadRtcMemoryFromFlash()
         RtcmemData copy;
         if (f.size() == sizeof(copy))
         {
-            const auto bytesRead =  f.readBytes(reinterpret_cast<char *>(&copy), sizeof(copy));
+            const auto bytesRead = f.readBytes(reinterpret_cast<char *>(&copy), sizeof(copy));
             f.close();
 
             copyRtcMemory(&copy, const_cast<RtcmemData *>(Rtcmem));

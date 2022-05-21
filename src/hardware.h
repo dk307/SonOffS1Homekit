@@ -1,16 +1,10 @@
 #pragma once
 
-#include "Button2.h"
-#include "CSE7766.h"
+#include <Button2.h>
+#include <S31CSE7766.h>
+#include <Timer.h>
 #include "changeCallback.h"
-
-enum class LedState
-{
-    On,
-    Off,
-    FastBlink,
-    SlowBlink
-};
+#include <memory>
 
 class hardware
 {
@@ -28,9 +22,9 @@ public:
     double getEnergy() const { return energy; }
     double getPowerFactor() const { return powerFactor; }
 
-    void setLedState(LedState ledState) {}
-
     static hardware instance;
+
+    void setLedDefaultState();
 
     changeCallBack relayChangeCallback;
     changeCallBack voltageChangeCallback;
@@ -48,28 +42,39 @@ public:
     static const int PowerFactorRoundPaces = 2;
 
 private:
+    enum class LedState : uint8_t
+    {
+        On,
+        Off,
+        PowerOver,
+    };
+
     const int ButtonPin = 0; // Sonoff On/Off button
     const int RelayPin = 12; // Sonoff relay
     const int LedPin = 13;   // Sonoff LED
-    const int CSE7766Rx = 1;
 
     double voltage{0};       // V
     double current{0};       // A
     double activePower{0};   // W
     double apparentPower{0}; // VA
-    double energy{0}; // KWh
+    double energy{0};        // KWh
     double powerFactor{0};
-
+    
+    LedState ledState;
+    uint64_t ledOldChange{0};
     Button2 button;
-    CSE7766 powerChip;
-    uint64_t lastRead{0};
-    uint64_t lastEnergySaved{0};
+
+    std::unique_ptr<CSE7766> powerChip;
+    uint64_t lastRtcEnergySaved{0};
+    StartStopTimer overPowerTimer;
 
     static float roundPlaces(double val, int places);
     void buttonClicked(Button2 &btn);
     void powerChipUpdate();
+    void setLedState(LedState ledState);
+    void ledUpdate();
 
-    typedef double (CSE7766::*getDataFtn)();
+    typedef double (CSE7766::*getDataFtn)() const;
 
     void checkChanged(getDataFtn getFtn, double &existingValue,
                       uint8_t decimalPaces, const changeCallBack &changeCallback);

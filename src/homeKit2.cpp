@@ -14,11 +14,18 @@
 homeKit2 homeKit2::instance;
 
 extern "C" homekit_server_config_t config;
-extern "C" homekit_characteristic_t chaCurrentTemperature;
-extern "C" homekit_characteristic_t chaHumidity;
+
+extern "C" homekit_characteristic_t chaVoltage;
+extern "C" homekit_characteristic_t chaCurrent;
+extern "C" homekit_characteristic_t chaActivePower;
+extern "C" homekit_characteristic_t chaApparantPower;
+extern "C" homekit_characteristic_t chaEnergy;
+
 extern "C" homekit_characteristic_t chaWifiIPAddress;
 extern "C" homekit_characteristic_t chaWifiRssi;
-extern "C" homekit_characteristic_t chaSensorRefershInterval;
+extern "C" homekit_characteristic_t chaReportSendInterval;
+extern "C" homekit_characteristic_t chaMaxPower;
+extern "C" homekit_characteristic_t chaMaxPowerHold;
 
 #define FIRST_ACCESSORY 0
 #define INFO_SERVICE 0
@@ -33,16 +40,17 @@ void homeKit2::begin()
     serialNumber.toUpperCase();
 
     config::instance.addConfigSaveCallback(std::bind(&homeKit2::onConfigChange, this));
-   // hardware::instance.temperatureChangeCallback.addConfigSaveCallback(std::bind(&homeKit2::notifyTemperatureChange, this));
-   // hardware::instance.humidityChangeCallback.addConfigSaveCallback(std::bind(&homeKit2::notifyHumidityChange, this));
-    chaSensorRefershInterval.setter = onSensorRefreshIntervalChange;
+    // hardware::instance.temperatureChangeCallback.addConfigSaveCallback(std::bind(&homeKit2::notifyTemperatureChange, this));
+    // hardware::instance.humidityChangeCallback.addConfigSaveCallback(std::bind(&homeKit2::notifyHumidityChange, this));
+    chaReportSendInterval.setter = onReportSendIntervalChange;
 
     updateChaValue(*config.accessories[FIRST_ACCESSORY]->services[INFO_SERVICE]->characteristics[SERIAL_NUMBER_CHA], serialNumber.c_str());
     notifyIPAddressChange();
     notifyWifiRssiChange();
-  //  notifyTemperatureChange();
-  //  notifyHumidityChange();
-    notifySensorRefreshIntervalChange();
+
+    //  notifyTemperatureChange();
+    //  notifyHumidityChange();
+    notifyConfigValueChanges();
     updateAccessoryName();
 
     localIP = WifiManager::instance.LocalIP().toString();
@@ -52,9 +60,9 @@ void homeKit2::begin()
 
     LOG_INFO(F("HomeKit Server Running"));
 
-  //  notifyTemperatureChange();
-  //  notifyHumidityChange();
-    notifySensorRefreshIntervalChange();
+    //  notifyTemperatureChange();
+    //  notifyHumidityChange();
+    notifyConfigValueChanges();
     notifyIPAddressChange();
     notifyWifiRssiChange();
 }
@@ -66,10 +74,7 @@ void homeKit2::onConfigChange()
         updateAccessoryName();
     }
 
-    if (sensorRefreshInterval != (config::instance.data.sensorsRefreshInterval / 1000))
-    {
-        notifySensorRefreshIntervalChange();
-    }
+    notifyConfigValueChanges();
 }
 
 void homeKit2::updateAccessoryName()
@@ -82,39 +87,36 @@ void homeKit2::updateAccessoryName()
     updateChaValue(*config.accessories[FIRST_ACCESSORY]->services[INFO_SERVICE]->characteristics[NAME_CHA], accessoryName.c_str());
 }
 
- 
-
-// void homeKit2::notifyChaChange()
-// {
-//     updateChaValue(chaHumidity, hardware::instance.getHumidity());
-//     homekit_characteristic_notify(&chaHumidity, chaHumidity.value);
-// }
-
-void homeKit2::notifySensorRefreshIntervalChange()
+template <class T>
+void homeKit2::notifyChaValue(homekit_characteristic_t &cha, T &&value)
 {
-    sensorRefreshInterval = config::instance.data.sensorsRefreshInterval / 1000;
-    updateChaValue(chaSensorRefershInterval, sensorRefreshInterval);
-    homekit_characteristic_notify(&chaSensorRefershInterval, chaSensorRefershInterval.value);
+    updateChaValue(cha, std::forward<T>(value));
+    homekit_characteristic_notify(&cha, cha.value);
+}
+
+void homeKit2::notifyConfigValueChanges()
+{
+    notifyChaValue(chaReportSendInterval, config::instance.data.reportSendInterval / 1000);
+    notifyChaValue(chaMaxPower, config::instance.data.maxPower);
+    notifyChaValue(chaMaxPowerHold, config::instance.data.maxPowerHold);
 }
 
 void homeKit2::notifyIPAddressChange()
 {
     localIP = WifiManager::instance.LocalIP().toString();
-    updateChaValue(chaWifiIPAddress, localIP.c_str());
-    homekit_characteristic_notify(&chaWifiIPAddress, chaWifiIPAddress.value);
+    notifyChaValue(chaWifiIPAddress, localIP.c_str());
 }
 
 void homeKit2::notifyWifiRssiChange()
 {
     rssi = WifiManager::instance.RSSI();
-    updateChaValue(chaWifiRssi, rssi);
-    homekit_characteristic_notify(&chaWifiRssi, chaWifiRssi.value);
+    notifyChaValue(chaWifiRssi, rssi);
 }
 
 void homeKit2::loop()
 {
     const auto now = millis();
-    if ((now - lastCheckedForNonEvents > config::instance.data.sensorsRefreshInterval))
+    if ((now - lastCheckedForNonEvents > config::instance.data.reportSendInterval))
     {
         if (localIP != WifiManager::instance.LocalIP().toString())
         {
@@ -126,6 +128,8 @@ void homeKit2::loop()
             notifyWifiRssiChange();
         }
         lastCheckedForNonEvents = now;
+
+        // send other reports
     }
 
     arduino_homekit_loop();
@@ -182,13 +186,12 @@ void homeKit2::updateChaValue(homekit_characteristic_t &cha, int value)
     cha.value.int_value = value;
 }
 
-void homeKit2::onSensorRefreshIntervalChange(const homekit_value_t value)
+void homeKit2::onReportSendIntervalChange(const homekit_value_t value)
 {
     if (value.format == homekit_format_uint64)
     {
-        homeKit2::instance.instance.sensorRefreshInterval = value.uint64_value;
-        updateChaValue(chaSensorRefershInterval, value.uint64_value);
-        config::instance.data.sensorsRefreshInterval = homeKit2::instance.instance.sensorRefreshInterval * 1000;
+        updateChaValue(chaReportSendInterval, value.uint64_value);
+        config::instance.data.reportSendInterval = value.format * 1000;
         config::instance.save();
     }
 }
@@ -197,6 +200,8 @@ uint8_t homeKit2::getConnectedClientsCount()
 {
     return arduino_homekit_connected_clients_count();
 }
+
+///////////////////////////////////////////////////////////
 
 bool read_storage(uint32 srcAddress, byte *desAddress, uint32 size)
 {
