@@ -23,7 +23,7 @@ struct configData
     uint16_t wattageThreshold;
     uint8_t wattagePercentThreshold;
     uint16_t maxPower;
-    uint16_t maxPowerHold;
+    uint64_t maxPowerHold;
     double voltageCalibrationRatio;
     double currentCalibrationRatio;
     double powerCalibrationRatio;

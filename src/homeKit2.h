@@ -16,18 +16,12 @@ public:
     {
         return password;
     }
-    uint8_t getConnectedClientsCount();
+    int getConnectedClientsCount();
 
 private:
     homeKit2(){};
-    static void updateChaValue(homekit_characteristic_t &cha, float value);
-    static void updateChaValue(homekit_characteristic_t &cha, const char* value);
-    static void updateChaValue(homekit_characteristic_t &cha, uint64_t value);
-    static void updateChaValue(homekit_characteristic_t &cha, int value);
-    static void updatePassword(const char *password);
 
-    template<class T>
-    void notifyChaValue(homekit_characteristic_t &cha, T&& value);
+    static void updatePassword(const char *password);
 
     void notifyConfigValueChanges();
     void notifyIPAddressChange();
@@ -36,13 +30,24 @@ private:
 
     void onConfigChange();
     static void onReportSendIntervalChange(const homekit_value_t);
+    static void onReportWattageThresholdChange(const homekit_value_t);
+    static void onReportWattagePercentThresholdChange(const homekit_value_t);
+    static void onMaxPowerChange(const homekit_value_t);
+    static void onMaxPowerHoldChange(const homekit_value_t);
+
+    static void onRelayChange(const homekit_value_t);
+    void notifyRelaychange();
+    void notifyOutletInUse();
+
+    void notifyPowerReport();
+
+    void checkPowerChanged();
 
     String accessoryName;
     String password;
     String serialNumber;
     String localIP;
-    int rssi;
 
     uint64_t lastCheckedForNonEvents{0};
+    uint64_t lastPowerReport{0};
 };
-

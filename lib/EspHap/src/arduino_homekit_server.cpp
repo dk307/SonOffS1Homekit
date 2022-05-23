@@ -3344,6 +3344,9 @@ void homekit_server_init(homekit_server_config_t *config) {
 	if (!config->category) {
 		config->category = config->accessories[0]->category;
 	}
+
+	homekit_overclock_start();
+
 	homekit_server_t *server = server_new();
 	running_server = server;
 	server->config = config;
@@ -3398,6 +3401,8 @@ void homekit_server_init(homekit_server_config_t *config) {
 	homekit_mdns_init(server);
 	HOMEKIT_NOTIFY_EVENT(server, HOMEKIT_EVENT_SERVER_INITIALIZED);
 	homekit_server_process(server);
+
+	homekit_overclock_end();
 
 	INFO("Init server over");
 }

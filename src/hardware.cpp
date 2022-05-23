@@ -150,7 +150,6 @@ void hardware::setLedState(LedState state)
 
 void hardware::setLedDefaultState()
 {
-    LOG_INFO(F("Set Default Led state"));
     setLedState(LedState::On);
 }
 

@@ -22,6 +22,8 @@ public:
     double getEnergy() const { return energy; }
     double getPowerFactor() const { return powerFactor; }
 
+    bool anyPower() const { return getActivePower() != 0; }
+
     static hardware instance;
 
     void setLedDefaultState();
@@ -59,7 +61,7 @@ private:
     double apparentPower{0}; // VA
     double energy{0};        // KWh
     double powerFactor{0};
-    
+
     LedState ledState;
     uint64_t ledOldChange{0};
     Button2 button;
