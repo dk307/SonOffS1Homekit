@@ -70,15 +70,13 @@ void homeKit2::begin()
     updateChaValue(chaOutlet, hardware::instance.isRelayOn());
     updateChaValue(chaOutletInUse, hardware::instance.anyPower());
 
-    updateChaValue(chaOutlet, hardware::instance.isRelayOn());
-    updateChaValue(chaOutletInUse, hardware::instance.anyPower());
-
     updateChaValue(chaVoltage, hardware::instance.getVoltage());
     updateChaValue(chaCurrent, hardware::instance.getCurrent());
     updateChaValue(chaActivePower, hardware::instance.getActivePower());
     updateChaValue(chaApparantPower, hardware::instance.getApparentPower());
     updateChaValue(chaEnergy, hardware::instance.getEnergy());
 
+    config.on_event = onHomeKitStateChange;
     arduino_homekit_setup(&config);
 
     LOG_INFO(F("HomeKit Server Running"));
@@ -102,6 +100,11 @@ void homeKit2::onConfigChange()
     notifyConfigValueChanges();
 }
 
+void homeKit2::onHomeKitStateChange(homekit_event_t event)
+{
+    homeKit2::instance.homeKitStateChanged.callChangeListeners();
+}
+
 void homeKit2::updateAccessoryName()
 {
     accessoryName = config::instance.data.hostName;
@@ -110,7 +113,7 @@ void homeKit2::updateAccessoryName()
         accessoryName = F("Sonoff S31");
     }
     updateChaValue(chaName, accessoryName.c_str());
-}
+} 
 
 void homeKit2::notifyConfigValueChanges()
 {
@@ -256,7 +259,7 @@ void homeKit2::checkPowerChanged()
 
 void homeKit2::notifyOutletInUse()
 {
-    const bool currentOutletInUse = chaActivePower.value.float_value != 0;
+    const bool currentOutletInUse = hardware::instance.getActivePower() > 0;
     notifyChaValue(chaOutletInUse, currentOutletInUse);
 }
 
