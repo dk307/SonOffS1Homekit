@@ -2,6 +2,7 @@
 
 #include <homekit/homekit.h>
 #include <homekit/characteristics.h>
+#include "changeCallback.h"
 
 class homeKit2
 {
@@ -17,6 +18,8 @@ public:
         return password;
     }
     int getConnectedClientsCount();
+
+    changeCallBack homeKitStateChanged;
 
 private:
     homeKit2(){};
@@ -34,6 +37,8 @@ private:
     static void onReportWattagePercentThresholdChange(const homekit_value_t);
     static void onMaxPowerChange(const homekit_value_t);
     static void onMaxPowerHoldChange(const homekit_value_t);
+
+    static void onHomeKitStateChange(homekit_event_t event);
 
     static void onRelayChange(const homekit_value_t);
     void notifyRelaychange();

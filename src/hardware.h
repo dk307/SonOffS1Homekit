@@ -48,7 +48,6 @@ private:
     {
         On,
         Off,
-        PowerOver,
     };
 
     const int ButtonPin = 0; // Sonoff On/Off button
@@ -62,8 +61,6 @@ private:
     double energy{0};        // KWh
     double powerFactor{0};
 
-    LedState ledState;
-    uint64_t ledOldChange{0};
     Button2 button;
 
     std::unique_ptr<CSE7766> powerChip;
@@ -72,9 +69,9 @@ private:
 
     static float roundPlaces(double val, int places);
     void buttonClicked(Button2 &btn);
+    void buttonLogPressed(Button2 &btn);
     void powerChipUpdate();
     void setLedState(LedState ledState);
-    void ledUpdate();
 
     typedef double (CSE7766::*getDataFtn)() const;
 

@@ -22,8 +22,6 @@ static const char ReactivePower[] = "reactivepower";
 static const char Energy[] = "energy";
 static const char PowerFactor[] = "powerfactor";
 
-extern std::vector<uint64_t> startuptime;
-
 typedef struct
 {
 	const char *Path;
@@ -268,10 +266,6 @@ void WebServer::informationGet(AsyncWebServerRequest *request)
 	auto response = new AsyncJsonResponse(true, 1024);
 	auto arr = response->getRoot();
 
-	for (auto t : startuptime)
-	{
-		addKeyValueObject(arr, "Startup time" + String(t), t);
-	}
 	addKeyValueObject(arr, F("Version"), VERSION);
 	addKeyValueObject(arr, F("Uptime"), GetUptime());
 	addKeyValueObject(arr, F("AP SSID"), WiFi.SSID());
@@ -688,7 +682,7 @@ bool WebServer::isIp(const String &str)
 {
 	for (unsigned int i = 0; i < str.length(); i++)
 	{
-		int c = str.charAt(i);
+		const auto c = str.charAt(i);
 		if (c != '.' && (c < '0' || c > '9'))
 		{
 			return false;

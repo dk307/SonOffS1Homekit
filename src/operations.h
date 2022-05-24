@@ -2,7 +2,6 @@
 
 #include <Arduino.h>
 
-
 class operations
 {
 public:
@@ -12,8 +11,8 @@ public:
 
     void factoryReset();
 
-    //update
-    bool startUpdate(size_t length, const String& md5, String &error);
+    // update
+    bool startUpdate(size_t length, const String &md5, String &error);
     bool writeUpdate(const uint8_t *data, size_t length, String &error);
     bool endUpdate(String &error);
     void abortUpdate();

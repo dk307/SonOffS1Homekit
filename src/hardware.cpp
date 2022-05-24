@@ -2,6 +2,8 @@
 #include "configManager.h"
 #include "WiFiManager.h"
 #include "logging.h"
+#include "operations.h"
+#include "homeKit2.h"
 
 #include <math.h>
 
@@ -22,18 +24,27 @@ void hardware::begin()
     digitalWrite(RelayPin, config::instance.getRelayState() ? HIGH : LOW);
 
     button.setReleasedHandler(std::bind(&hardware::buttonClicked, this, std::placeholders::_1));
+    button.setLongClickHandler(std::bind(&hardware::buttonLogPressed, this, std::placeholders::_1));
     button.begin(ButtonPin, INPUT);
 
-    config::instance.addConfigSaveCallback([]
-                                           {
-        hardware::instance.setLedDefaultState();
-        hardware::instance.overPowerTimer.stop(); });
+    homeKit2::instance.homeKitStateChanged.addConfigSaveCallback([this]
+                                                                 { setLedDefaultState(); });
 }
 
 void hardware::buttonClicked(Button2 &btn)
 {
     // toggle
     setRelayState(!isRelayOn());
+}
+
+void hardware::buttonLogPressed(Button2 &btn)
+{
+    const auto time = btn.wasPressedFor();
+
+    if (time >= 10000)
+    {
+        operations::instance.factoryReset();
+    }
 }
 
 void hardware::setRelayState(bool on)
@@ -68,7 +79,6 @@ void hardware::loop()
 {
     button.loop();
     powerChipUpdate();
-    ledUpdate();
 }
 
 void hardware::checkChanged(getDataFtn getFtn, double &existingValue,
@@ -106,7 +116,6 @@ void hardware::powerChipUpdate()
 
     if ((config::instance.data.maxPower != 0) && (activePower >= double(config::instance.data.maxPower)))
     {
-        setLedState(LedState::PowerOver);
         const auto elapsed = overPowerTimer.startIfNotRunning();
         if (elapsed >= config::instance.data.maxPowerHold)
         {
@@ -118,51 +127,24 @@ void hardware::powerChipUpdate()
     }
     else
     {
-        setLedDefaultState();
         overPowerTimer.stop();
     }
 }
 
 void hardware::setLedState(LedState state)
 {
-    ledState = state;
     switch (state)
     {
     case LedState::On:
-        if (ledState != LedState::On)
-        {
-            digitalWrite(LedPin, LOW);
-            ledState = state;
-        }
+        digitalWrite(LedPin, LOW);
         break;
     case LedState::Off:
-        if (ledState != LedState::Off)
-        {
-            digitalWrite(LedPin, HIGH);
-            ledState = state;
-        }
-        break;
-    case LedState::PowerOver:
-        ledState = state;
+        digitalWrite(LedPin, HIGH);
         break;
     };
 }
 
 void hardware::setLedDefaultState()
 {
-    setLedState(LedState::On);
-}
-
-void hardware::ledUpdate()
-{
-    if (ledState == LedState::PowerOver)
-    {
-        const auto now = millis();
-        if ((ledOldChange + 200) < now)
-        {
-            ledOldChange = now;
-            const float it = random(0, 255);
-            analogWrite(LedPin, it);
-        }
-    }
+    setLedState(homeKit2::instance.getConnectedClientsCount() > 0 ? LedState::On : LedState::Off);
 }
