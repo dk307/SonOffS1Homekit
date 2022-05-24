@@ -4,131 +4,65 @@
 // http://www.chipsea.com/UploadFiles/2017/08/11144342F01B5662.pdf
 // -----------------------------------------------------------------------------
 
-#include "CSE7766.h"
+#include "S31CSE7766.h"
 
-// Constructor
-CSE7766::CSE7766()
+CSE7766::CSE7766(const Energy &value, double &ratioV, double &ratioC, double &ratioP)
+    : _energy(value), _ratioV(ratioV), _ratioC(ratioC), _ratioP(ratioP)
 {
-}
-// Destructor
-CSE7766::~CSE7766()
-{
-    if (_serial)
-        delete _serial;
-    // end();
+    Serial.begin(CSE7766_BAUDRATE);
 }
 
-void CSE7766::setRX(unsigned char pin_rx)
-{
-    if (_pin_rx == pin_rx)
-        return;
-    _pin_rx = pin_rx;
-    _dirty = true;
-}
-
-void CSE7766::setInverted(bool inverted)
-{
-    if (_inverted == inverted)
-        return;
-    _inverted = inverted;
-    _dirty = true;
-}
-
-unsigned char CSE7766::getRX()
+unsigned char CSE7766::getRX() const
 {
     return _pin_rx;
 }
 
-bool CSE7766::getInverted()
+bool CSE7766::getInverted() const
 {
     return _inverted;
 }
 
-void CSE7766::expectedCurrent(double expected)
-{
-    if ((expected > 0) && (_current > 0))
-    {
-        _ratioC = _ratioC * (expected / _current);
-    }
-}
-
-void CSE7766::expectedVoltage(unsigned int expected)
-{
-    if ((expected > 0) && (_voltage > 0))
-    {
-        _ratioV = _ratioV * (expected / _voltage);
-    }
-}
-
-void CSE7766::expectedPower(unsigned int expected)
-{
-    if ((expected > 0) && (_active > 0))
-    {
-        _ratioP = _ratioP * (expected / _active);
-    }
-}
-
-void CSE7766::setCurrentRatio(double value)
-{
-    _ratioC = value;
-};
-
-void CSE7766::setVoltageRatio(double value)
-{
-    _ratioV = value;
-};
-
-void CSE7766::setPowerRatio(double value)
-{
-    _ratioP = value;
-};
-
-double CSE7766::getCurrentRatio()
+double CSE7766::getCurrentRatio() const
 {
     return _ratioC;
 };
 
-double CSE7766::getVoltageRatio()
+double CSE7766::getVoltageRatio() const
 {
     return _ratioV;
 };
 
-double CSE7766::getPowerRatio()
+double CSE7766::getPowerRatio() const
 {
     return _ratioP;
 };
-
-void CSE7766::resetRatios()
-{
-    _ratioC = _ratioV = _ratioP = 1.0;
-}
 
 void CSE7766::resetEnergy(double value)
 {
     _energy = value;
 }
 
-double CSE7766::getCurrent()
+double CSE7766::getCurrent() const
 {
     return _current;
 }
 
-double CSE7766::getVoltage()
+double CSE7766::getVoltage() const
 {
     return _voltage;
 }
 
-double CSE7766::getActivePower()
+double CSE7766::getActivePower() const
 {
     return _active;
 }
 
-double CSE7766::getApparentPower()
+double CSE7766::getApparentPower() const
 {
     return _voltage * _current;
 }
 
-double CSE7766::getReactivePower()
+double CSE7766::getReactivePower() const
 {
     const double active = getActivePower();
     const double apparent = getApparentPower();
@@ -142,55 +76,20 @@ double CSE7766::getReactivePower()
     }
 }
 
-double CSE7766::getPowerFactor()
+double CSE7766::getPowerFactor() const
 {
     return ((_voltage > 0) && (_current > 0)) ? 100 * _active / _voltage / _current : 100;
 }
 
-const Energy &CSE7766::getEnergy()
+const Energy &CSE7766::getEnergy() const
 {
     return _energy;
 }
 
-double CSE7766::getEnergyKwh()
+double CSE7766::getEnergyKwh() const
 {
     return _energy.asDouble();
 }
-
-void CSE7766::begin()
-{
-    if (!_dirty)
-        return;
-
-    if (_serial)
-        delete _serial;
-
-    if (1 == _pin_rx)
-    {
-        Serial.begin(CSE7766_BAUDRATE);
-    }
-    else
-    {
-        _serial = new SoftwareSerial(_pin_rx, -1, _inverted);
-        _serial->enableIntTx(false);
-        _serial->begin(CSE7766_BAUDRATE);
-    }
-
-    _ready = true;
-    _dirty = false;
-}
-
-void CSE7766::handle()
-{
-
-    if (!_ready)
-        return;
-    _read();
-}
-
-// ---------------------------------------------------------------------
-// private
-// ---------------------------------------------------------------------
 
 /**
  * "
@@ -199,7 +98,7 @@ void CSE7766::handle()
  * "
  * @return bool
  */
-bool CSE7766::_checksum()
+bool CSE7766::_checksum() const
 {
     unsigned char checksum = 0;
     for (unsigned char i = 2; i < 23; i++)
@@ -311,13 +210,12 @@ void CSE7766::_process()
     {
         difference = cf_pulses - cf_pulses_last;
     }
-    _energy += Ws{difference * (float)_coefP / 1000000.0};
+    _energy += Ws{std::round(difference * (double)_coefP / 1000000.0)};
     cf_pulses_last = cf_pulses;
 }
 
-void CSE7766::_read()
+bool CSE7766::handle()
 {
-
     _error = SENSOR_ERROR_OK;
 
     static unsigned char index = 0;
@@ -325,7 +223,6 @@ void CSE7766::_read()
 
     while (_serial_available())
     {
-
         // A 24 bytes message takes ~55ms to go through at 4800 bps
         // Reset counter if more than 1000ms have passed since last byte.
         if (millis() - last > CSE7766_SYNC_INTERVAL)
@@ -366,41 +263,23 @@ void CSE7766::_read()
     {
         _process();
         index = 0;
+        return true;
     }
+
+    return false;
 }
 
 bool CSE7766::_serial_available()
 {
-    if (1 == _pin_rx)
-    {
-        return Serial.available();
-    }
-    else
-    {
-        return _serial->available();
-    }
+    return Serial.available();
 }
 
 void CSE7766::_serial_flush()
 {
-    if (1 == _pin_rx)
-    {
-        return Serial.flush();
-    }
-    else
-    {
-        return _serial->flush();
-    }
+    return Serial.flush();
 }
 
 uint8_t CSE7766::_serial_read()
 {
-    if (1 == _pin_rx)
-    {
-        return Serial.read();
-    }
-    else
-    {
-        return _serial->read();
-    }
+    return Serial.read();
 }

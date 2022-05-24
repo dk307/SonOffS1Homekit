@@ -10,22 +10,24 @@
 
 void setup(void)
 {
-	//Serial.begin(115200);
+	// Serial.begin(115200);
 
 	operations::instance.begin();
 	config::instance.begin();
-	WifiManager::instance.begin();
-	WebServer::instance.begin();
 	hardware::instance.begin();
-	homeKit2::instance.begin();
+	WifiManager::instance.begin(); // 3
+	WebServer::instance.begin(); // 4
+	homeKit2::instance.begin(); // 5
+
+	hardware::instance.setLedDefaultState();
 	LOG_INFO(F("Finish setup. Free heap: ") << ESP.getFreeHeap() / 1024 << F(" KB"));
 }
 
 void loop(void)
 {
-	WifiManager::instance.loop();
 	config::instance.loop();
+	WifiManager::instance.loop();
 	homeKit2::instance.loop();
 	hardware::instance.loop();
-	operations::instance.loop();
+	operations::instance.loop(); // this can restart etc so last
 }

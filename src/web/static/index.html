@@ -29,7 +29,7 @@
             <!-- Navbar brand -->
             <a class="navbar-brand mt-2 mt-sm-0" href="#">
                 <img src="media/logo.png" height="35" alt="Logo" loading="lazy" />
-                <span id="navHostName">Sensor</span>
+                <span id="navHostName">S31</span>
             </a>
 
             <!-- Right elements -->
@@ -64,7 +64,7 @@
                 </div>
                 <div class="col">
                     <div class="card">
-                        <div class="card-header">Power</div>
+                        <div class="card-header">Report</div>
                         <div class="card-body">
                             <div class="card-text">
                                 <table class="table table-borderless">
@@ -339,19 +339,62 @@
                                 <label class="form-label" for="hostName">Hostname</label>
                             </div>
 
+
+                            <small class="form-text text-muted mb-3">Max Power</small>
+                            <div class="form-outline mb-3">
+                                <input type="number" id="maxPower" name="maxPower" class="form-control form-control"
+                                    title="Maximum allowed power in watts. 0 means not limit" required />
+                                <label class="form-label" for="ssid">Max power (Watts)</label>
+                            </div>
+
                             <div class="form-outline mb-4">
-                                <input type="number" id="sensorsRefreshInterval" name="sensorsRefreshInterval"
+                                <input type="number" id="maxPowerHold" name="maxPowerHold"
+                                    class="form-control form-control" title="Time in seconds to stay over Max Power before
+                                    power off" required />
+                                <label class="form-label" for="ssid">Max power hold (seconds)</label>
+                            </div>
+
+
+                            <small class="form-text text-muted mb-3">Homekit report settings</small>
+
+                            <div class="form-outline mb-3">
+                                <input type="number" id="reportSendInterval" name="reportSendInterval"
                                     class="form-control form-control" required />
-                                <label class="form-label" for="ssid">Sensors Refresh Interval (seconds)</label>
+                                <label class="form-label" for="ssid">Report send interval (seconds)</label>
                             </div>
 
-                            <div class="form-check form-switch">
-                                <input class="form-check-input" type="checkbox" role="switch" id="showDisplayInF"
-                                    name="showDisplayInF" value="0" />
-                                <label class="form-check-label" for="showDisplayInF">Show temperature in Fahrenheit on
-                                    display</label>
+                            <div class="form-outline mb-3">
+                                <input type="number" id="wattageThreshold" name="wattageThreshold"
+                                    class="form-control form-control" required />
+                                <label class="form-label" for="ssid">Wattage threshold for sending report (Watts)</label>
                             </div>
 
+                            <div class="form-outline mb-3">
+                                <input type="number" id="wattagePercentThreshold" name="wattagePercentThreshold"
+                                    class="form-control form-control" required />
+                                <label class="form-label" for="ssid">Wattage percentage change for sending
+                                    report</label>
+                            </div>
+
+                            <small class="form-text text-muted mb-3">Report Calibration</small>
+
+                            <div class="form-outline mb-3">
+                                <input type="text" id="voltageCalibrationRatio" name="voltageCalibrationRatio"
+                                    class="form-control form-control" required />
+                                <label class="form-label" for="ssid">Voltage calibration ratio</label>
+                            </div>
+
+                            <div class="form-outline mb-3">
+                                <input type="text" id="currentCalibrationRatio" name="currentCalibrationRatio"
+                                    class="form-control form-control" required />
+                                <label class="form-label" for="ssid">Current calibration ratio</label>
+                            </div>
+
+                            <div class="form-outline mb-3">
+                                <input type="text" id="powerCalibrationRatio" name="powerCalibrationRatio"
+                                    class="form-control form-control" required />
+                                <label class="form-label" for="ssid">Power calibration ratio</label>
+                            </div>
                         </div>
                         <div class="modal-footer">
                             <button type="button" class="btn btn-secondary" data-mdb-dismiss="modal">Close</button>
@@ -619,9 +662,14 @@
                     dataType: "json",
                     success: function (data) {
                         $('#hostName').val(data["hostname"]);
-                        $('#sensorsRefreshInterval').val(data["sensorsrefreshinterval"] / 1000);
-                        $('#showDisplayInF').prop('checked', data["showdisplayinf"]);
-                        $('#showDisplayInF').val(data["showdisplayinf"] ? "1" : "0");
+                        $('#reportSendInterval').val(data["reportsendinterval"] / 1000);
+                        $('#wattageThreshold').val(data["wattagethreshold"]);
+                        $('#wattagePercentThreshold').val(data["wattagepercentthreshold"]);
+                        $('#maxPower').val(data["maxpower"]);
+                        $('#maxPowerHold').val(data["maxpowerhold"] / 1000);
+                        $('#voltageCalibrationRatio').val(data["voltagecalibrationratio"]);
+                        $('#currentCalibrationRatio').val(data["currentcalibrationratio"]);
+                        $('#powerCalibrationRatio').val(data["powercalibrationratio"]);
                     },
                     error: function () {
                         console.warn('Failed to update');

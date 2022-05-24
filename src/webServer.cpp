@@ -451,7 +451,14 @@ void WebServer::webLoginUpdate(AsyncWebServerRequest *request)
 void WebServer::otherSettingsUpdate(AsyncWebServerRequest *request)
 {
 	const auto hostName = F("hostName");
-	const auto sensorsRefreshInterval = F("sensorsRefreshInterval");
+	const auto reportSendInterval = F("reportSendInterval");
+	const auto wattagethreshold = F("wattageThreshold");
+	const auto wattagepercenthreshold = F("wattagePercentThreshold");
+	const auto maxpower = F("maxPower");
+	const auto maxpowerhold = F("maxPowerHold");
+	const auto voltageCalibrationRatio = F("voltageCalibrationRatio");
+	const auto currentCalibrationRatio = F("currentCalibrationRatio");
+	const auto powerCalibrationRatio = F("powerCalibrationRatio");
 
 	LOG_INFO(F("config Update"));
 
@@ -465,9 +472,60 @@ void WebServer::otherSettingsUpdate(AsyncWebServerRequest *request)
 		config::instance.data.hostName = request->arg(hostName);
 	}
 
-	if (request->hasArg(sensorsRefreshInterval))
+	if (request->hasArg(reportSendInterval))
 	{
-		config::instance.data.sensorsRefreshInterval = request->arg(sensorsRefreshInterval).toInt() * 1000;
+		const auto value = request->arg(reportSendInterval).toInt();
+		if (value > 0)
+		{
+			config::instance.data.reportSendInterval = value * 1000;
+		}
+	}
+
+	if (request->hasArg(wattagethreshold))
+	{
+		config::instance.data.wattageThreshold = request->arg(wattagethreshold).toInt();
+	}
+
+	if (request->hasArg(wattagepercenthreshold))
+	{
+		config::instance.data.wattagePercentThreshold = request->arg(wattagepercenthreshold).toInt();
+	}
+
+	if (request->hasArg(maxpower))
+	{
+		config::instance.data.maxPower = request->arg(maxpower).toInt();
+	}
+
+	if (request->hasArg(maxpowerhold))
+	{
+		config::instance.data.maxPowerHold = request->arg(maxpowerhold).toInt() * 1000;
+	}
+
+	if (request->hasArg(voltageCalibrationRatio))
+	{
+		const auto value = request->arg(voltageCalibrationRatio).toDouble();
+		if (value > 0)
+		{
+			config::instance.data.voltageCalibrationRatio = value;
+		}
+	}
+
+	if (request->hasArg(currentCalibrationRatio))
+	{
+		const auto value = request->arg(currentCalibrationRatio).toDouble();
+		if (value > 0)
+		{
+			config::instance.data.currentCalibrationRatio = value;
+		}
+	}
+
+	if (request->hasArg(powerCalibrationRatio))
+	{
+		const auto value = request->arg(powerCalibrationRatio).toDouble();
+		if (value > 0)
+		{
+			config::instance.data.powerCalibrationRatio = value;
+		}
 	}
 
 	config::instance.save();
@@ -484,7 +542,6 @@ void WebServer::restartDevice(AsyncWebServerRequest *request)
 	}
 
 	request->send(200);
-	hardware::instance.setLedState(LedState::SlowBlink);
 	operations::instance.reboot();
 }
 
@@ -498,7 +555,6 @@ void WebServer::factoryReset(AsyncWebServerRequest *request)
 	}
 
 	request->send(200);
-	hardware::instance.setLedState(LedState::FastBlink);
 	operations::instance.factoryReset();
 }
 
@@ -512,7 +568,6 @@ void WebServer::rebootOnUploadComplete(AsyncWebServerRequest *request)
 	}
 
 	request->send(200);
-	hardware::instance.setLedState(LedState::SlowBlink);
 	operations::instance.reboot();
 }
 
@@ -528,7 +583,6 @@ void WebServer::homekitReset(AsyncWebServerRequest *request)
 	config::instance.data.homeKitPairData.resize(0);
 	config::instance.save();
 	request->send(200);
-	hardware::instance.setLedState(LedState::FastBlink);
 	operations::instance.reboot();
 }
 
@@ -628,7 +682,7 @@ bool WebServer::isIp(const String &str)
 {
 	for (unsigned int i = 0; i < str.length(); i++)
 	{
-		int c = str.charAt(i);
+		const auto c = str.charAt(i);
 		if (c != '.' && (c < '0' || c > '9'))
 		{
 			return false;
@@ -683,7 +737,6 @@ void WebServer::firmwareUpdateUpload(AsyncWebServerRequest *request,
 
 		if (operations::instance.startUpdate(request->contentLength(), md5, error))
 		{
-			hardware::instance.setLedState(LedState::FastBlink);
 			// success, let's make sure we end the update if the client hangs up
 			request->onDisconnect(handleEarlyUpdateDisconnect);
 		}

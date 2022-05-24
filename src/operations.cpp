@@ -48,7 +48,7 @@ bool operations::beginFS()
 	LittleFS.format();
 	if (!LittleFS.begin())
 	{
-		LOG_ERROR(F("DANGER: Failed to mount even after formatting!"));
+		LOG_ERROR(F("Failed to mount even after formatting!"));
 
 		delay(10000); // Make sure the debug message doesn't just float by.
 		return false;

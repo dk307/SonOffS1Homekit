@@ -19,8 +19,14 @@ struct configData
     String webUserName;
     String webPassword;
     std::vector<uint8_t> homeKitPairData;
-    uint64_t sensorsRefreshInterval;
-    bool relayOn;
+    uint64_t reportSendInterval;
+    uint16_t wattageThreshold;
+    uint8_t wattagePercentThreshold;
+    uint16_t maxPower;
+    uint64_t maxPowerHold;
+    double voltageCalibrationRatio;
+    double currentCalibrationRatio;
+    double powerCalibrationRatio;
 
     configData()
     {
@@ -34,8 +40,17 @@ struct configData
         webUserName = defaultUserIDPassword;
         webPassword = defaultUserIDPassword;
         homeKitPairData.resize(0);
-        sensorsRefreshInterval = 5 * 1000;
-        relayOn = false;
+        reportSendInterval = 60 * 1000;
+        
+        wattageThreshold = 25;
+        wattagePercentThreshold = 5;
+        
+        maxPower = 0;
+        maxPowerHold = 10000;
+
+        voltageCalibrationRatio = 1.0;
+        currentCalibrationRatio = 1.0;
+        powerCalibrationRatio = 1.0;
     }
 };
 
@@ -96,5 +111,5 @@ private:
     void rtcmemSetup();
     bool tryReadRtcMemoryFromFlash();
     void tryWriteRtcMemoryToFlash();
-    static void copyRtcMemory(const RtcmemData * source, RtcmemData * dest);
+    static void copyRtcMemory(const RtcmemData *source, RtcmemData *dest);
 };
